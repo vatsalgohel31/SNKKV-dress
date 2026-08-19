@@ -1,0 +1,335 @@
+{% extends 'base.html' %}
+
+{% block title %}Excel Viewer & Reports - School Dress Management{% endblock %}
+
+{% block content %}
+<div class="page-container wide-container">
+    <!-- Top Header with Actions -->
+    <div class="page-header viewer-header">
+        <div class="page-title-group">
+            <h1>
+                <i class="fa-solid fa-table-cells"></i>
+                School Dress Order Sheet (Excel Viewer)
+            </h1>
+            <p class="subtitle">Live spreadsheet grid view of all student dress records with instant filters, calculations, and PDF export.</p>
+        </div>
+
+        <!-- Right Side Export Action Buttons -->
+        <div class="header-actions">
+            {% if is_admin %}
+            <a href="{% url 'entry' %}" class="btn btn-secondary">
+                <i class="fa-solid fa-plus"></i> New Student Entry
+            </a>
+            {% endif %}
+
+            <!-- Right-Side Excel Export Button -->
+            <a href="{% url 'export_excel' %}?{{ request.GET.urlencode }}" class="btn btn-outline-success" title="Download as Microsoft Excel (.xlsx)">
+                <i class="fa-solid fa-file-excel"></i> Export Excel
+            </a>
+
+            <!-- Prominent Right-Side PDF Export Button -->
+            <a href="{% url 'export_pdf' %}?{{ request.GET.urlencode }}" target="_blank" class="btn btn-danger btn-pdf-export" title="Generate and Download PDF Report">
+                <i class="fa-solid fa-file-pdf"></i>
+                <span>Create PDF Report</span>
+            </a>
+        </div>
+    </div>
+
+
+    <!-- Quick Stats Cards Row -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-icon bg-blue-soft"><i class="fa-solid fa-user-graduate"></i></div>
+            <div class="metric-data">
+                <div class="metric-val">{{ total_records }}</div>
+                <div class="metric-label">Filtered Students</div>
+            </div>
+            <div class="metric-pill">
+                <span>{{ gujarati_count }} Guj</span> | <span>{{ english_count }} Eng</span>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon bg-teal-soft"><i class="fa-solid fa-layer-group"></i></div>
+            <div class="metric-data">
+                <div class="metric-val">{{ primary_count }} <span class="metric-sub-val">Pri</span> / {{ secondary_count }} <span class="metric-sub-val">Sec</span> / {{ higher_sec_count }} <span class="metric-sub-val">H.Sec</span></div>
+                <div class="metric-label">Section Distribution</div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon bg-indigo-soft"><i class="fa-solid fa-shirt"></i></div>
+            <div class="metric-data">
+                <div class="metric-val">{{ total_dresses }}</div>
+                <div class="metric-label">Total Dresses</div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon bg-purple-soft"><i class="fa-solid fa-ribbon"></i></div>
+            <div class="metric-data">
+                <div class="metric-val">{{ total_dupattas }}</div>
+                <div class="metric-label">Total Dupattas</div>
+            </div>
+        </div>
+
+        <div class="metric-card highlight-card">
+            <div class="metric-icon bg-emerald-soft"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+            <div class="metric-data">
+                <div class="metric-val">₹{{ total_amount|floatformat:2 }}</div>
+                <div class="metric-label">Total Order Value</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excel Filter Bar -->
+    <div class="filter-panel card-shadow">
+        <div class="filter-panel-header">
+            <div class="filter-title">
+                <i class="fa-solid fa-filter"></i>
+                <span>Filter &amp; Search Records</span>
+            </div>
+            {% if request.GET %}
+            <a href="{% url 'viewer' %}" class="btn btn-link btn-sm reset-filter-btn">
+                <i class="fa-solid fa-rotate-left"></i> Clear All Filters
+            </a>
+            {% endif %}
+        </div>
+
+        <form method="GET" action="{% url 'viewer' %}" class="filter-form" id="viewerFilterForm">
+            <div class="filter-grid">
+                <!-- Search by Name / Notes -->
+                <div class="filter-item filter-search">
+                    <label class="filter-label"><i class="fa-solid fa-magnifying-glass"></i> Search Name / Notes</label>
+                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Type student name..." value="{{ current_search }}">
+                </div>
+
+                <!-- Section Filter (Primary / Secondary / Higher Secondary) -->
+                <div class="filter-item">
+                    <label class="filter-label"><i class="fa-solid fa-layer-group"></i> Section</label>
+                    <select name="section" class="form-select form-select-sm auto-submit-select highlight-filter">
+                        <option value="">All Sections</option>
+                        <option value="PRIMARY" {% if current_section == 'PRIMARY' %}selected{% endif %}>Primary (Std 1-8)</option>
+                        <option value="SECONDARY" {% if current_section == 'SECONDARY' %}selected{% endif %}>Secondary (Std 9, 10)</option>
+                        <option value="HIGHER_SECONDARY" {% if current_section == 'HIGHER_SECONDARY' %}selected{% endif %}>Higher Sec (Std 11, 12)</option>
+                    </select>
+                </div>
+
+                <!-- Standard Filter -->
+                <div class="filter-item">
+                    <label class="filter-label"><i class="fa-solid fa-graduation-cap"></i> Standard</label>
+                    <select name="standard" class="form-select form-select-sm auto-submit-select">
+                        <option value="">All Standards (1-12)</option>
+                        {% for val, label in standards %}
+                        <option value="{{ val }}" {% if current_std|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Medium Filter -->
+                <div class="filter-item">
+                    <label class="filter-label"><i class="fa-solid fa-language"></i> Medium</label>
+                    <select name="medium" class="form-select form-select-sm auto-submit-select">
+                        <option value="">All Mediums</option>
+                        <option value="GUJARATI" {% if current_medium == 'GUJARATI' %}selected{% endif %}>Gujarati Medium</option>
+                        <option value="ENGLISH" {% if current_medium == 'ENGLISH' %}selected{% endif %}>English Medium</option>
+                    </select>
+                </div>
+
+                <!-- 1 Dress Filter -->
+                <div class="filter-item">
+                    <label class="filter-label"><i class="fa-solid fa-shirt"></i> 1 Dress</label>
+                    <select name="has_dress" class="form-select form-select-sm auto-submit-select">
+                        <option value="">All</option>
+                        <option value="1" {% if current_has_dress == '1' %}selected{% endif %}>Yes</option>
+                    </select>
+                </div>
+
+                <!-- 1 Dupatta Filter -->
+                <div class="filter-item">
+                    <label class="filter-label"><i class="fa-solid fa-ribbon"></i> 1 Dupatta</label>
+                    <select name="has_dupatta" class="form-select form-select-sm auto-submit-select">
+                        <option value="">All</option>
+                        <option value="1" {% if current_has_dupatta == '1' %}selected{% endif %}>Yes</option>
+                    </select>
+                </div>
+
+                <!-- Extra Dress Filter -->
+                <div class="filter-item">
+                    <label class="filter-label"><i class="fa-solid fa-plus"></i> Extra Dress</label>
+                    <select name="has_extra_dress" class="form-select form-select-sm auto-submit-select">
+                        <option value="">All</option>
+                        <option value="1" {% if current_has_extra_dress == '1' %}selected{% endif %}>Yes</option>
+                    </select>
+                </div>
+
+                <!-- Extra Dupatta Filter -->
+                <div class="filter-item">
+                    <label class="filter-label"><i class="fa-solid fa-plus"></i> Extra Dup</label>
+                    <select name="has_extra_dupatta" class="form-select form-select-sm auto-submit-select">
+                        <option value="">All</option>
+                        <option value="1" {% if current_has_extra_dupatta == '1' %}selected{% endif %}>Yes</option>
+                    </select>
+                </div>
+
+                <!-- Apply Button -->
+                <div class="filter-item filter-btn-col">
+                    <button type="submit" class="btn btn-primary btn-sm btn-block">
+                        <i class="fa-solid fa-filter"></i> Apply
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Excel Spreadsheet View Table Card -->
+    <div class="excel-view-card card-shadow">
+        <div class="excel-sheet-toolbar">
+            <div class="sheet-status">
+                <i class="fa-solid fa-table"></i>
+                <span>Showing <b>{{ entries.count }}</b> Records</span>
+            </div>
+            <div class="sheet-export-right">
+                <span class="export-label">Quick Download:</span>
+                <a href="{% url 'export_pdf' %}?{{ request.GET.urlencode }}" target="_blank" class="btn btn-danger btn-sm" title="Generate PDF Report">
+                    <i class="fa-solid fa-file-pdf"></i> Download PDF
+                </a>
+                <a href="{% url 'export_excel' %}?{{ request.GET.urlencode }}" class="btn btn-success btn-sm" title="Download Excel (.xlsx)">
+                    <i class="fa-solid fa-file-excel"></i> Download Excel
+                </a>
+            </div>
+        </div>
+
+        <div class="table-responsive-wrapper excel-scroll-container">
+            <table class="excel-sheet-table" id="studentDataTable">
+                <thead>
+                    <tr>
+                        <th class="col-num text-center">#</th>
+                        <th class="col-name">Student Name</th>
+                        <th class="col-sec text-center">Section</th>
+                        <th class="col-std text-center">Standard</th>
+                        <th class="col-medium text-center">Medium</th>
+                        <th class="col-check text-center">1 Dress</th>
+                        <th class="col-check text-center">1 Dupatta</th>
+                        <th class="col-check text-center">1 Extra Dress</th>
+                        <th class="col-check text-center">1 Extra Dupatta</th>
+                        <th class="col-qty text-center">Dress Qty</th>
+                        <th class="col-qty text-center">Dupatta Qty</th>
+                        <th class="col-price text-right">Total Price (₹)</th>
+                        {% if is_admin %}
+                        <th class="col-actions text-center">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in entries %}
+                    <tr class="excel-row">
+                        <td class="col-num text-center font-mono">{{ forloop.counter }}</td>
+                        <td class="col-name font-semibold">
+                            <div class="student-name-box">
+                                <i class="fa-solid fa-user text-muted"></i>
+                                <span>{{ entry.name }}</span>
+                            </div>
+                        </td>
+                        <td class="col-sec text-center">
+                            <span class="badge {{ entry.section_badge_class }}">
+                                {{ entry.section_name }}
+                            </span>
+                        </td>
+                        <td class="col-std text-center">
+                            <span class="badge badge-std">Std {{ entry.standard }}</span>
+                        </td>
+                        <td class="col-medium text-center">
+                            <span class="badge {% if entry.medium == 'GUJARATI' %}badge-gujarati{% else %}badge-english{% endif %}">
+                                {{ entry.get_medium_display }}
+                            </span>
+                        </td>
+                        <td class="col-check text-center">
+                            {% if entry.has_dress %}
+                                <span class="tag-yes"><i class="fa-solid fa-check"></i> Yes</span>
+                            {% else %}
+                                <span class="tag-no">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="col-check text-center">
+                            {% if entry.has_dupatta %}
+                                <span class="tag-yes"><i class="fa-solid fa-check"></i> Yes</span>
+                            {% else %}
+                                <span class="tag-no">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="col-check text-center">
+                            {% if entry.has_extra_dress %}
+                                <span class="tag-yes"><i class="fa-solid fa-check"></i> Yes</span>
+                            {% else %}
+                                <span class="tag-no">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="col-check text-center">
+                            {% if entry.has_extra_dupatta %}
+                                <span class="tag-yes"><i class="fa-solid fa-check"></i> Yes</span>
+                            {% else %}
+                                <span class="tag-no">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="col-qty text-center font-bold">
+                            <span class="qty-pill qty-dress">{{ entry.dress_qty }}</span>
+                        </td>
+                        <td class="col-qty text-center font-bold">
+                            <span class="qty-pill qty-dup">{{ entry.dupatta_qty }}</span>
+                        </td>
+                        <td class="col-price text-right font-bold text-emerald">
+                            ₹{{ entry.total_price|floatformat:2 }}
+                        </td>
+                        {% if is_admin %}
+                        <td class="col-actions text-center">
+                            <div class="action-btn-group">
+                                <a href="{% url 'edit_entry' entry.pk %}" class="btn-action btn-edit" title="Edit Entry">
+                                    <i class="fa-solid fa-pen"></i>
+                                </a>
+                                <form method="POST" action="{% url 'delete_entry' entry.pk %}" class="delete-form" onsubmit="return confirm('Are you sure you want to delete {{ entry.name }}?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-action btn-delete" title="Delete Record">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if is_admin %}13{% else %}12{% endif %}" class="empty-table-state">
+                            <div class="empty-box">
+                                <i class="fa-solid fa-folder-open"></i>
+                                <h3>No Student Dress Records Found</h3>
+                                <p>There are no entries matching your active filter criteria or no records have been added yet.</p>
+                                {% if is_admin %}
+                                <a href="{% url 'entry' %}" class="btn btn-primary btn-sm">
+                                    <i class="fa-solid fa-plus"></i> Add First Student Entry
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if entries %}
+                <tfoot>
+                    <tr class="excel-summary-row">
+                        <td colspan="5" class="text-left font-bold">Total / Summary ({{ entries.count }} Students)</td>
+                        <td colspan="4" class="text-center text-muted font-normal">-</td>
+                        <td class="text-center font-bold text-primary">{{ total_dresses }} Dresses</td>
+                        <td class="text-center font-bold text-primary">{{ total_dupattas }} Dupattas</td>
+                        <td class="text-right font-bold text-emerald text-lg">₹{{ total_amount|floatformat:2 }}</td>
+                        {% if is_admin %}<td class="text-center"></td>{% endif %}
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

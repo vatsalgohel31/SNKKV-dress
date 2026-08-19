@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}Standard-wise Price Matrix (Std 1 to 12) - School Dress{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div class="page-title-group">
+            <h1>
+                <i class="fa-solid fa-tags"></i>
+                Standard-wise Price Master (Std 1 to 12)
+            </h1>
+            <p class="subtitle">Configure and update base dress, extra dress, dupatta, and extra dupatta prices standard-by-standard. These rates automatically apply during student entry.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'entry' %}" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-user-plus"></i> Go to Entry Form
+            </a>
+            <a href="{% url 'viewer' %}" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-table-cells"></i> View Excel Grid
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" action="{% url 'pricing' %}" class="pricing-matrix-card">
+        {% csrf_token %}
+
+        <div class="pricing-card-header">
+            <div class="header-left">
+                <h3><i class="fa-solid fa-sliders"></i> Standard Rates Matrix (Std 1 - 12)</h3>
+                <span class="badge badge-info">12 Standards Active</span>
+            </div>
+            <div class="header-right">
+                <button type="submit" class="btn btn-success">
+                    <i class="fa-solid fa-floppy-disk"></i> Save All Changes
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive-wrapper">
+            <table class="excel-styled-table pricing-table">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Standard</th>
+                        <th>
+                            <div class="th-content">
+                                <i class="fa-solid fa-shirt"></i> 1 Dress Price (₹)
+                                <span class="th-sub">Base Dress</span>
+                            </div>
+                        </th>
+                        <th>
+                            <div class="th-content">
+                                <i class="fa-solid fa-plus"></i> 1 Extra Dress (₹)
+                                <span class="th-sub">Additional Dress</span>
+                            </div>
+                        </th>
+                        <th>
+                            <div class="th-content">
+                                <i class="fa-solid fa-ribbon"></i> 1 Dupatta (₹)
+                                <span class="th-sub">Base Dupatta</span>
+                            </div>
+                        </th>
+                        <th>
+                            <div class="th-content">
+                                <i class="fa-solid fa-ribbon"></i> 1 Extra Dupatta (₹)
+                                <span class="th-sub">Additional Dupatta</span>
+                            </div>
+                        </th>
+                        <th style="width: 140px;">Full Package Total</th>
+                        <th style="width: 120px;">Last Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sp in standard_prices %}
+                    <tr class="pricing-row" data-std="{{ sp.standard }}">
+                        <td class="std-cell">
+                            <span class="std-badge-lg">Std {{ sp.standard }}</span>
+                            <input type="hidden" name="standard_{{ sp.standard }}" value="{{ sp.standard }}">
+                        </td>
+                        <td>
+                            <div class="price-input-wrapper">
+                                <span class="curr-sign">₹</span>
+                                <input type="number" step="1" min="0" 
+                                       name="dress_price_{{ sp.standard }}" 
+                                       id="dress_price_{{ sp.standard }}"
+                                       value="{{ sp.dress_price|floatformat:0 }}" 
+                                       class="form-control price-input-matrix std-calc-input" 
+                                       required>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="price-input-wrapper">
+                                <span class="curr-sign">₹</span>
+                                <input type="number" step="1" min="0" 
+                                       name="extra_dress_price_{{ sp.standard }}" 
+                                       id="extra_dress_price_{{ sp.standard }}"
+                                       value="{{ sp.extra_dress_price|floatformat:0 }}" 
+                                       class="form-control price-input-matrix std-calc-input" 
+                                       required>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="price-input-wrapper">
+                                <span class="curr-sign">₹</span>
+                                <input type="number" step="1" min="0" 
+                                       name="dupatta_price_{{ sp.standard }}" 
+                                       id="dupatta_price_{{ sp.standard }}"
+                                       value="{{ sp.dupatta_price|floatformat:0 }}" 
+                                       class="form-control price-input-matrix std-calc-input" 
+                                       required>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="price-input-wrapper">
+                                <span class="curr-sign">₹</span>
+                                <input type="number" step="1" min="0" 
+                                       name="extra_dupatta_price_{{ sp.standard }}" 
+                                       id="extra_dupatta_price_{{ sp.standard }}"
+                                       value="{{ sp.extra_dupatta_price|floatformat:0 }}" 
+                                       class="form-control price-input-matrix std-calc-input" 
+                                       required>
+                            </div>
+                        </td>
+                        <td class="total-col">
+                            <span class="full-package-sum" id="total_sum_{{ sp.standard }}">₹0</span>
+                        </td>
+                        <td class="date-col">
+                            <span class="date-text">{{ sp.updated_at|date:"d M Y" }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pricing-footer-actions">
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="fa-solid fa-floppy-disk"></i> Save & Apply Standard Rates
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

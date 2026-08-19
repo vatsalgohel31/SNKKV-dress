@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_edit %}Edit Student Dress Entry{% else %}New Student Dress Entry{% endif %} - School Dress{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div class="page-title-group">
+            <h1>
+                <i class="fa-solid {% if is_edit %}fa-pen-to-square{% else %}fa-file-circle-plus{% endif %}"></i>
+                {% if is_edit %}Edit Student Dress Record{% else %}Student Dress Entry Form{% endif %}
+            </h1>
+            <p class="subtitle">Enter student information, select standard & medium, pick dress package, and record measurements.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'pricing' %}" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-tags"></i> Standard Prices
+            </a>
+            <a href="{% url 'viewer' %}" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-table-cells"></i> View Excel Grid
+            </a>
+        </div>
+    </div>
+
+    <!-- Hidden JSON data for standard prices for JS live calculation -->
+    {{ prices_map|json_script:"standard-prices-data" }}
+
+    <div class="entry-layout-grid">
+        <!-- Main Form Column -->
+        <div class="form-main-card">
+            <form method="POST" id="dressEntryForm" class="entry-form-element">
+                {% csrf_token %}
+
+                <!-- Section 1: Student Demographics -->
+                <div class="form-section">
+                    <div class="section-title">
+                        <span class="section-badge">1</span>
+                        <h3>Student Information</h3>
+                    </div>
+
+                    <div class="form-row-3">
+                        <div class="form-group col-span-2">
+                            <label for="student_name" class="form-label required">
+                                <i class="fa-solid fa-user-graduate"></i> Student Full Name
+                            </label>
+                            <input type="text" name="name" id="student_name" class="form-control form-control-lg" placeholder="e.g., Aarav Patel / Diya Shah" required value="{{ form.name.value|default:'' }}" autofocus>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="student_medium" class="form-label required">
+                                <i class="fa-solid fa-language"></i> Medium
+                            </label>
+                            <select name="medium" id="student_medium" class="form-select form-select-lg">
+                                <option value="GUJARATI" {% if form.medium.value == 'GUJARATI' or not form.medium.value %}selected{% endif %}>Gujarati Medium (ગુજરાતી)</option>
+                                <option value="ENGLISH" {% if form.medium.value == 'ENGLISH' %}selected{% endif %}>English Medium</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="student_standard" class="form-label required">
+                                <i class="fa-solid fa-graduation-cap"></i> Standard (Std 1 to 12)
+                            </label>
+                            <select name="standard" id="student_standard" class="form-select form-select-lg highlight-select">
+                                {% for val, label in standards %}
+                                <option value="{{ val }}" {% if form.standard.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Current Standard Price Matrix Pill -->
+                        <div class="std-pricing-live-pill" id="stdPricingPill">
+                            <div class="pill-label">Active Rates for <span id="currentStdLabel">Std 1</span></div>
+                            <div class="pill-values">
+                                <span class="rate-item"><i class="fa-solid fa-shirt"></i> Dress: <b>₹<span id="rateDress">350</span></b></span>
+                                <span class="rate-item"><i class="fa-solid fa-plus-minus"></i> Extra Dress: <b>₹<span id="rateExtraDress">300</span></b></span>
+                                <span class="rate-item"><i class="fa-solid fa-ribbon"></i> Dupatta: <b>₹<span id="rateDupatta">120</span></b></span>
+                                <span class="rate-item"><i class="fa-solid fa-ribbon"></i> Extra Dup: <b>₹<span id="rateExtraDupatta">100</span></b></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: School Dress Model / Package Selection -->
+                <div class="form-section">
+                    <div class="section-title">
+                        <span class="section-badge">2</span>
+                        <h3>School Dress Model / Package</h3>
+                    </div>
+
+                    <!-- Preset Package Cards -->
+                    <div class="package-cards-grid">
+                        <div class="package-card" data-package="1_DRESS">
+                            <div class="card-radio-indicator"><i class="fa-solid fa-circle-check"></i></div>
+                            <div class="package-card-icon"><i class="fa-solid fa-shirt"></i></div>
+                            <div class="package-title">1 Dress Only</div>
+                            <div class="package-desc">Standard single uniform dress</div>
+                            <div class="package-items-tag">1 Dress</div>
+                        </div>
+
+                        <div class="package-card" data-package="1_DRESS_1_DUPATTA">
+                            <div class="card-radio-indicator"><i class="fa-solid fa-circle-check"></i></div>
+                            <div class="package-card-icon"><i class="fa-solid fa-layer-group"></i></div>
+                            <div class="package-title">1 Dress + 1 Dupatta</div>
+                            <div class="package-desc">Standard dress with single dupatta</div>
+                            <div class="package-items-tag">1 Dress + 1 Dupatta</div>
+                        </div>
+
+                        <div class="package-card" data-package="1_DRESS_1_EXTRA_1_DUPATTA">
+                            <div class="card-radio-indicator"><i class="fa-solid fa-circle-check"></i></div>
+                            <div class="package-card-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+                            <div class="package-title">1 Dress + 1 Extra + 1 Dupatta</div>
+                            <div class="package-desc">2 dresses total + 1 dupatta</div>
+                            <div class="package-items-tag">2 Dresses + 1 Dupatta</div>
+                        </div>
+
+                        <div class="package-card" data-package="1_DRESS_1_EXTRA_1_DUPATTA_1_EXTRA">
+                            <div class="card-radio-indicator"><i class="fa-solid fa-circle-check"></i></div>
+                            <div class="package-card-icon"><i class="fa-solid fa-star"></i></div>
+                            <div class="package-title">1 Dress + 1 Extra + 1 Dupatta + 1 Extra Dupatta</div>
+                            <div class="package-desc">Complete full set (2 dresses + 2 dupattas)</div>
+                            <div class="package-items-tag">2 Dresses + 2 Dupattas</div>
+                        </div>
+                    </div>
+
+                    <!-- Hidden package model selector for form sync -->
+                    <input type="hidden" name="package_model" id="package_model_input" value="{{ form.package_model.value|default:'1_DRESS' }}">
+
+                    <!-- Detailed Items Checkboxes with Custom Adjustment -->
+                    <div class="item-selection-box">
+                        <div class="item-selection-header">
+                            <span class="header-text"><i class="fa-solid fa-list-check"></i> Itemized Dress & Dupatta Checkbox Breakdown</span>
+                            <span class="header-sub">Check/uncheck items for custom combinations</span>
+                        </div>
+                        <div class="checkbox-options-grid">
+                            <label class="custom-checkbox-card" id="card_has_dress">
+                                <input type="checkbox" name="has_dress" id="toggle_has_dress" class="dress-item-toggle" {% if form.has_dress.value or form.has_dress.value is None %}checked{% endif %}>
+                                <div class="card-content">
+                                    <div class="card-icon"><i class="fa-solid fa-shirt"></i></div>
+                                    <div class="card-details">
+                                        <span class="item-name">1 Dress (Base)</span>
+                                        <span class="item-price-tag">+₹<span id="label_dress_price">350</span></span>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label class="custom-checkbox-card" id="card_has_dupatta">
+                                <input type="checkbox" name="has_dupatta" id="toggle_has_dupatta" class="dress-item-toggle" {% if form.has_dupatta.value %}checked{% endif %}>
+                                <div class="card-content">
+                                    <div class="card-icon"><i class="fa-solid fa-ribbon"></i></div>
+                                    <div class="card-details">
+                                        <span class="item-name">1 Dupatta</span>
+                                        <span class="item-price-tag">+₹<span id="label_dupatta_price">120</span></span>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label class="custom-checkbox-card" id="card_has_extra_dress">
+                                <input type="checkbox" name="has_extra_dress" id="toggle_has_extra_dress" class="dress-item-toggle" {% if form.has_extra_dress.value %}checked{% endif %}>
+                                <div class="card-content">
+                                    <div class="card-icon"><i class="fa-solid fa-shirt"></i></div>
+                                    <div class="card-details">
+                                        <span class="item-name">1 Extra Dress</span>
+                                        <span class="item-price-tag">+₹<span id="label_extra_dress_price">300</span></span>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label class="custom-checkbox-card" id="card_has_extra_dupatta">
+                                <input type="checkbox" name="has_extra_dupatta" id="toggle_has_extra_dupatta" class="dress-item-toggle" {% if form.has_extra_dupatta.value %}checked{% endif %}>
+                                <div class="card-content">
+                                    <div class="card-icon"><i class="fa-solid fa-ribbon"></i></div>
+                                    <div class="card-details">
+                                        <span class="item-name">1 Extra Dupatta</span>
+                                        <span class="item-price-tag">+₹<span id="label_extra_dupatta_price">100</span></span>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Price Calculation & Summary -->
+                <div class="form-section">
+                    <div class="section-title">
+                        <span class="section-badge">3</span>
+                        <h3>Order Amount &amp; Price Calculation</h3>
+                    </div>
+
+                    <!-- Live Total Price Card -->
+                    <div class="live-price-summary-card full-summary-card">
+                        <div class="price-summary-top">
+                            <div class="price-header">
+                                <span class="calc-badge"><i class="fa-solid fa-calculator"></i> Auto-Calculated</span>
+                                <span class="price-title">Total Payable Amount</span>
+                            </div>
+                            <div class="price-number-display">
+                                <span class="currency-symbol">₹</span>
+                                <span id="priceDisplay" class="price-val">350.00</span>
+                            </div>
+                            <input type="hidden" name="total_price" id="calculated_total_price" value="{{ form.total_price.value|default:'350.00' }}">
+                        </div>
+
+                        <div class="price-breakdown-details" id="priceBreakdownList">
+                            <div class="breakdown-line"><span>1 Dress:</span> <b>₹<span id="bDress">350</span></b></div>
+                            <div class="breakdown-line hide" id="bExtraDressRow"><span>1 Extra Dress:</span> <b>₹<span id="bExtraDress">300</span></b></div>
+                            <div class="breakdown-line hide" id="bDupattaRow"><span>1 Dupatta:</span> <b>₹<span id="bDupatta">120</span></b></div>
+                            <div class="breakdown-line hide" id="bExtraDupattaRow"><span>1 Extra Dupatta:</span> <b>₹<span id="bExtraDupatta">100</span></b></div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Submit Action Buttons -->
+                <div class="form-submit-bar">
+                    {% if is_edit %}
+                    <a href="{% url 'viewer' %}" class="btn btn-secondary btn-lg">
+                        <i class="fa-solid fa-xmark"></i> Cancel
+                    </a>
+                    <button type="submit" name="submit_action" value="update" class="btn btn-success btn-lg">
+                        <i class="fa-solid fa-floppy-disk"></i> Update Student Record
+                    </button>
+                    {% else %}
+                    <button type="submit" name="submit_action" value="save_new" class="btn btn-primary btn-lg">
+                        <i class="fa-solid fa-plus"></i> Save & Add Another Student
+                    </button>
+                    <button type="submit" name="submit_action" value="save_view" class="btn btn-dark btn-lg">
+                        <i class="fa-solid fa-table"></i> Save & View Records Sheet
+                    </button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+
+        <!-- Right Side Quick Recent Feed -->
+        {% if not is_edit and recent_entries %}
+        <div class="recent-sidebar">
+            <div class="sidebar-card">
+                <div class="sidebar-header">
+                    <h4><i class="fa-solid fa-clock-rotate-left"></i> Recently Added</h4>
+                    <span class="count-pill">{{ recent_entries.count }}</span>
+                </div>
+                <div class="recent-list">
+                    {% for item in recent_entries %}
+                    <div class="recent-item">
+                        <div class="recent-info">
+                            <div class="recent-name">{{ item.name }}</div>
+                            <div class="recent-meta">
+                                <span class="badge badge-std">Std {{ item.standard }}</span>
+                                <span class="badge badge-med">{{ item.get_medium_display }}</span>
+                            </div>
+                        </div>
+                        <div class="recent-price">
+                            ₹{{ item.total_price|floatformat:0 }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="sidebar-footer">
+                    <a href="{% url 'viewer' %}" class="btn btn-link btn-block">View All in Excel Sheet &rarr;</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
