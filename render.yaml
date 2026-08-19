@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: snkkv-dress
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn school_dress.wsgi:application --bind 0.0.0.0:$PORT"
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "*"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://*.onrender.com,https://snkkv-dress.onrender.com"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: snkkv-dress-db
+          property: connectionString
+
+databases:
+  - name: snkkv-dress-db
+    databaseName: dress_db
+    user: dress_user
+    plan: free
